@@ -10,6 +10,6 @@
 #define LED_COUNT 1 
 
 void neo_blinky(void *pvParameters);
-
+void neo_blinky2(void *pvParameters);
 
 #endif

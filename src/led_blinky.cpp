@@ -25,25 +25,25 @@ void led_blinky2(void *pvParameters) {
     // CASE 1: Normal operating temperature (Below 30°C)
     if(glob_temperature < 30.0) {
       digitalWrite(LED_GPIO, HIGH);  
-      vTaskDelay(pdMS_TO_TICKS(5000)); // LED ON for 5 seconds
+      vTaskDelay(5000); // LED ON for 5 seconds
       digitalWrite(LED_GPIO, LOW);  
-      vTaskDelay(pdMS_TO_TICKS(5000)); // LED OFF for 5 seconds
+      vTaskDelay(5000); // LED OFF for 5 seconds
     }
     
     // CASE 2: Elevated temperature (Between 30°C and 60°C)
     else if(glob_temperature < 60.0) {
       digitalWrite(LED_GPIO, HIGH);  
-      vTaskDelay(pdMS_TO_TICKS(2000)); // LED ON for 2 seconds
+      vTaskDelay(2000); // LED ON for 2 seconds
       digitalWrite(LED_GPIO, LOW);  
-      vTaskDelay(pdMS_TO_TICKS(2000)); // LED OFF for 2 seconds
+      vTaskDelay(2000); // LED OFF for 2 seconds
     }
     
     // CASE 3: Critical/High temperature (Above 60°C)
     else {
       digitalWrite(LED_GPIO, HIGH);  
-      vTaskDelay(pdMS_TO_TICKS(500));  // LED ON for 0.5 seconds
+      vTaskDelay(500);  // LED ON for 0.5 seconds
       digitalWrite(LED_GPIO, LOW);  
-      vTaskDelay(pdMS_TO_TICKS(500));  // LED OFF for 0.5 seconds
+      vTaskDelay(500);  // LED OFF for 0.5 seconds
     }
   }
 }
