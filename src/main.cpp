@@ -17,6 +17,8 @@
 void setup()
 {
   Serial.begin(115200);
+  sensorQueue = xQueueCreate(1, sizeof(SensorData));
+
   check_info_File(0);
 
   xTaskCreate(led_blinky2, "Task LED Blink", 2048, NULL, 2, NULL);

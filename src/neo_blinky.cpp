@@ -37,16 +37,16 @@ void neo_blinky2(void *pvParameters) {
     strip.begin();
     strip.clear();
     strip.show();
+    SensorData data;
 
     while(1) {
         // --- STEP 1: CALCULATE COLOR RATIO (0.0 to 1.0) ---
-        
-        float h = glob_humidity;
-
+        xQueuePeek(sensorQueue, &data, 0); // Read the latest sensor data from the queue
+      
         // Calculate the ratio
         // At 0%: ratio = 0.0 (Pure Blue)
         // At 100%: ratio = 1.0 (Pure Red)
-        float ratio = h / 100.0;
+        float ratio = data.humidity / 100.0;
 
         // Red channel follows the ratio: $Red = 255 * ratio$
         // Blue channel is the inverse: $Blue = 255 * (1.0 - ratio)$

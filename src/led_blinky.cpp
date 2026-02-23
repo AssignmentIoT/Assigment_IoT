@@ -20,10 +20,11 @@ void led_blinky(void *pvParameters){
 void led_blinky2(void *pvParameters) {
   // Initialize the LED GPIO pin as an output
   pinMode(LED_GPIO, OUTPUT);
-  
+  SensorData data;
   while(1) {
+    xQueuePeek(sensorQueue, &data, 0); // Read the latest sensor data from the queue
     // CASE 1: Normal operating temperature (Below 30°C)
-    if(glob_temperature < 30.0) {
+    if(data.temperature < 30.0) {
       digitalWrite(LED_GPIO, HIGH);  
       vTaskDelay(5000); // LED ON for 5 seconds
       digitalWrite(LED_GPIO, LOW);  
@@ -31,7 +32,7 @@ void led_blinky2(void *pvParameters) {
     }
     
     // CASE 2: Elevated temperature (Between 30°C and 60°C)
-    else if(glob_temperature < 60.0) {
+    else if(data.temperature < 60.0) {
       digitalWrite(LED_GPIO, HIGH);  
       vTaskDelay(2000); // LED ON for 2 seconds
       digitalWrite(LED_GPIO, LOW);  

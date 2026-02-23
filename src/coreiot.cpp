@@ -109,6 +109,7 @@ void setup_coreiot(){
 void coreiot_task(void *pvParameters){
 
     setup_coreiot();
+    SensorData data;
 
     while(1){
 
@@ -117,8 +118,11 @@ void coreiot_task(void *pvParameters){
         }
         client.loop();
 
+        // Read the latest sensor data from the queue
+        xQueuePeek(sensorQueue, &data, 0);
+
         // Sample payload, publish to 'v1/devices/me/telemetry'
-        String payload = "{\"temperature\":" + String(glob_temperature) +  ",\"humidity\":" + String(glob_humidity) + "}";
+        String payload = "{\"temperature\":" + String(data.temperature) +  ",\"humidity\":" + String(data.humidity) + "}";
         
         client.publish("v1/devices/me/telemetry", payload.c_str());
 
