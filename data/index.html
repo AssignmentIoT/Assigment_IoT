@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 IoT Dashboard - RTOS Control System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/raphael@2.3.0/raphael.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js"></script>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <div class="logo-container">
+            <i class="fas fa-microchip"></i>
+            <h2>ESP32 IoT</h2>
+            <p class="version">RTOS v1.0</p>
+        </div>
+        
+        <nav class="nav-menu">
+            <div class="nav-item active" onclick="showSection('dashboard')">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </div>
+            <div class="nav-item" onclick="showSection('sensors')">
+                <i class="fas fa-temperature-high"></i>
+                <span>Sensors</span>
+            </div>
+            <div class="nav-item" onclick="showSection('devices')">
+                <i class="fas fa-lightbulb"></i>
+                <span>Devices</span>
+            </div>
+            <div class="nav-item" onclick="showSection('tinyml')">
+                <i class="fas fa-brain"></i>
+                <span>TinyML</span>
+            </div>
+            <div class="nav-item" onclick="showSection('network')">
+                <i class="fas fa-wifi"></i>
+                <span>Network</span>
+            </div>
+            <div class="nav-item" onclick="showSection('settings')">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </div>
+        </nav>
+
+        <div class="connection-status">
+            <div class="status-indicator">
+                <span class="status-dot" id="wsStatus"></span>
+                <span id="wsStatusText">Connecting...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <!-- Dashboard Section -->
+        <div id="dashboard" class="section active">
+            <div class="section-header">
+                <h1><i class="fas fa-tachometer-alt"></i> System Dashboard</h1>
+                <p>Real-time monitoring and control</p>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon temp">
+                        <i class="fas fa-thermometer-half"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="quickTemp">--</h3>
+                        <p>Temperature</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon humidity">
+                        <i class="fas fa-tint"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="quickHumidity">--</h3>
+                        <p>Humidity</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon devices">
+                        <i class="fas fa-plug"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="quickDevices">0</h3>
+                        <p>Active Devices</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon uptime">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="quickUptime">00:00:00</h3>
+                        <p>Uptime</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="charts-row">
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-line"></i> Temperature History</h3>
+                    <canvas id="tempChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-area"></i> Humidity History</h3>
+                    <canvas id="humidityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- System Info -->
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3><i class="fas fa-microchip"></i> System Information</h3>
+                    <div class="info-row">
+                        <span>Chip Model:</span>
+                        <strong id="chipModel">ESP32-S3</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Free Heap:</span>
+                        <strong id="freeHeap">-- KB</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>CPU Frequency:</span>
+                        <strong id="cpuFreq">240 MHz</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Flash Size:</span>
+                        <strong id="flashSize">8 MB</strong>
+                    </div>
+                </div>
+                <div class="info-card">
+                    <h3><i class="fas fa-tasks"></i> RTOS Tasks</h3>
+                    <div class="task-item">
+                        <span>LED Blink Task</span>
+                        <span class="task-status running">Running</span>
+                    </div>
+                    <div class="task-item">
+                        <span>NeoPixel Task</span>
+                        <span class="task-status running">Running</span>
+                    </div>
+                    <div class="task-item">
+                        <span>Sensor Task</span>
+                        <span class="task-status running">Running</span>
+                    </div>
+                    <div class="task-item">
+                        <span>Web Server Task</span>
+                        <span class="task-status running">Running</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sensors Section -->
+        <div id="sensors" class="section">
+            <div class="section-header">
+                <h1><i class="fas fa-temperature-high"></i> Environmental Sensors</h1>
+                <p>Temperature and humidity monitoring with LCD display</p>
+            </div>
+
+            <div class="gauges-container">
+                <div class="gauge-card">
+                    <h3>Temperature (°C)</h3>
+                    <div id="gauge_temp"></div>
+                    <div class="gauge-status">
+                        <span class="status-badge" id="tempStatus">Normal</span>
+                    </div>
+                </div>
+                <div class="gauge-card">
+                    <h3>Humidity (%)</h3>
+                    <div id="gauge_humidity"></div>
+                    <div class="gauge-status">
+                        <span class="status-badge" id="humidityStatus">Normal</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LCD Display Simulation -->
+            <div class="lcd-display-card">
+                <h3><i class="fas fa-tv"></i> LCD Display (16x2)</h3>
+                <div class="lcd-screen">
+                    <div class="lcd-line" id="lcdLine1">Temp: -- C</div>
+                    <div class="lcd-line" id="lcdLine2">Humidity: -- %</div>
+                </div>
+                <div class="lcd-info">
+                    <p><i class="fas fa-info-circle"></i> Semaphore-controlled display updates based on sensor thresholds</p>
+                </div>
+            </div>
+
+            <!-- Sensor Thresholds -->
+            <div class="threshold-card">
+                <h3><i class="fas fa-sliders-h"></i> Sensor Thresholds</h3>
+                <div class="threshold-group">
+                    <label>Temperature Warning (°C):</label>
+                    <input type="number" id="tempWarning" value="30" min="0" max="50">
+                    <label>Temperature Critical (°C):</label>
+                    <input type="number" id="tempCritical" value="35" min="0" max="50">
+                </div>
+                <div class="threshold-group">
+                    <label>Humidity Warning (%):</label>
+                    <input type="number" id="humidityWarning" value="70" min="0" max="100">
+                    <label>Humidity Critical (%):</label>
+                    <input type="number" id="humidityCritical" value="80" min="0" max="100">
+                </div>
+                <button class="btn-primary" onclick="updateThresholds()">
+                    <i class="fas fa-save"></i> Update Thresholds
+                </button>
+            </div>
+        </div>
+
+        <!-- Devices Section -->
+        <div id="devices" class="section">
+            <div class="section-header">
+                <h1><i class="fas fa-lightbulb"></i> Device Control</h1>
+                <p>LED and NeoPixel control with real-time feedback</p>
+            </div>
+
+            <!-- LED Controls -->
+            <div class="device-grid">
+                <div class="device-control-card">
+                    <div class="device-header">
+                        <i class="fas fa-lightbulb device-icon-large"></i>
+                        <h3>LED 1 (Temperature)</h3>
+                    </div>
+                    <p class="device-description">Blinks based on temperature conditions</p>
+                    <div class="led-status" id="led1Status">
+                        <div class="led-indicator" id="led1Indicator"></div>
+                        <span id="led1Text">OFF</span>
+                    </div>
+                    <div class="device-controls">
+                        <button class="btn-control" onclick="toggleLED(1)">
+                            <i class="fas fa-power-off"></i> Toggle
+                        </button>
+                        <select id="led1Mode" onchange="setLEDMode(1)">
+                            <option value="auto">Auto (Temp-based)</option>
+                            <option value="manual">Manual</option>
+                            <option value="off">Off</option>
+                        </select>
+                    </div>
+                    <div class="device-info">
+                        <span>GPIO Pin: <strong>2</strong></span>
+                        <span>Mode: <strong id="led1ModeText">Auto</strong></span>
+                    </div>
+                </div>
+
+                <div class="device-control-card">
+                    <div class="device-header">
+                        <i class="fas fa-lightbulb device-icon-large"></i>
+                        <h3>LED 2 (Humidity)</h3>
+                    </div>
+                    <p class="device-description">Controlled via web interface</p>
+                    <div class="led-status" id="led2Status">
+                        <div class="led-indicator" id="led2Indicator"></div>
+                        <span id="led2Text">OFF</span>
+                    </div>
+                    <div class="device-controls">
+                        <button class="btn-control" onclick="toggleLED(2)">
+                            <i class="fas fa-power-off"></i> Toggle
+                        </button>
+                        <select id="led2Mode" onchange="setLEDMode(2)">
+                            <option value="auto">Auto (Humidity-based)</option>
+                            <option value="manual">Manual</option>
+                            <option value="off">Off</option>
+                        </select>
+                    </div>
+                    <div class="device-info">
+                        <span>GPIO Pin: <strong>4</strong></span>
+                        <span>Mode: <strong id="led2ModeText">Auto</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NeoPixel Control -->
+            <div class="neopixel-card">
+                <h3><i class="fas fa-palette"></i> NeoPixel LED (WS2812B)</h3>
+                <p>RGB LED color indicates humidity levels</p>
+                <div class="neopixel-display">
+                    <div class="neopixel-led" id="neopixelLed"></div>
+                    <div class="neopixel-info">
+                        <p><strong>Current Color:</strong> <span id="neopixelColor">Blue</span></p>
+                        <p><strong>Humidity Level:</strong> <span id="neopixelHumidity">Normal</span></p>
+                    </div>
+                </div>
+                <div class="color-legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #00f;"></div>
+                        <span>Low (&lt;40%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #0f0;"></div>
+                        <span>Normal (40-70%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff0;"></div>
+                        <span>High (70-85%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f00;"></div>
+                        <span>Critical (&gt;85%)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TinyML Section -->
+        <div id="tinyml" class="section">
+            <div class="section-header">
+                <h1><i class="fas fa-brain"></i> TinyML Model</h1>
+                <p>Environmental condition classification using machine learning</p>
+            </div>
+
+            <div class="tinyml-grid">
+                <div class="tinyml-card">
+                    <h3><i class="fas fa-database"></i> Model Information</h3>
+                    <div class="info-row">
+                        <span>Model Type:</span>
+                        <strong>Neural Network</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Input Features:</span>
+                        <strong>Temperature, Humidity</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Output Classes:</span>
+                        <strong>4 (Comfort, Hot, Cold, Humid)</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Model Size:</span>
+                        <strong id="modelSize">~8 KB</strong>
+                    </div>
+                    <div class="info-row">
+                        <span>Inference Time:</span>
+                        <strong id="inferenceTime">~5 ms</strong>
+                    </div>
+                </div>
+
+                <div class="tinyml-card">
+                    <h3><i class="fas fa-chart-bar"></i> Model Accuracy</h3>
+                    <div class="accuracy-display">
+                        <div class="accuracy-circle">
+                            <span id="modelAccuracy">92.5%</span>
+                        </div>
+                        <p>Validation Accuracy</p>
+                    </div>
+                    <div class="accuracy-details">
+                        <div class="accuracy-row">
+                            <span>Training Accuracy:</span>
+                            <strong>95.2%</strong>
+                        </div>
+                        <div class="accuracy-row">
+                            <span>Test Accuracy:</span>
+                            <strong>92.5%</strong>
+                        </div>
+                        <div class="accuracy-row">
+                            <span>F1 Score:</span>
+                            <strong>0.91</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tinyml-card">
+                    <h3><i class="fas fa-brain"></i> Current Prediction</h3>
+                    <div class="prediction-display">
+                        <div class="prediction-result" id="predictionResult">
+                            <i class="fas fa-smile"></i>
+                            <h2 id="predictionClass">Comfortable</h2>
+                            <p>Confidence: <strong id="predictionConfidence">87%</strong></p>
+                        </div>
+                    </div>
+                    <div class="class-probabilities">
+                        <div class="prob-item">
+                            <span>Comfortable:</span>
+                            <div class="prob-bar">
+                                <div class="prob-fill" id="probComfort" style="width: 87%;"></div>
+                            </div>
+                            <span id="probComfortText">87%</span>
+                        </div>
+                        <div class="prob-item">
+                            <span>Hot:</span>
+                            <div class="prob-bar">
+                                <div class="prob-fill" id="probHot" style="width: 8%;"></div>
+                            </div>
+                            <span id="probHotText">8%</span>
+                        </div>
+                        <div class="prob-item">
+                            <span>Cold:</span>
+                            <div class="prob-bar">
+                                <div class="prob-fill" id="probCold" style="width: 3%;"></div>
+                            </div>
+                            <span id="probColdText">3%</span>
+                        </div>
+                        <div class="prob-item">
+                            <span>Humid:</span>
+                            <div class="prob-bar">
+                                <div class="prob-fill" id="probHumid" style="width: 2%;"></div>
+                            </div>
+                            <span id="probHumidText">2%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dataset Information -->
+            <div class="dataset-card">
+                <h3><i class="fas fa-table"></i> Training Dataset</h3>
+                <div class="dataset-info">
+                    <div class="dataset-stat">
+                        <h4>1,500</h4>
+                        <p>Total Samples</p>
+                    </div>
+                    <div class="dataset-stat">
+                        <h4>4</h4>
+                        <p>Classes</p>
+                    </div>
+                    <div class="dataset-stat">
+                        <h4>80/20</h4>
+                        <p>Train/Test Split</p>
+                    </div>
+                    <div class="dataset-stat">
+                        <h4>2</h4>
+                        <p>Features</p>
+                    </div>
+                </div>
+                <p class="dataset-description">
+                    <i class="fas fa-info-circle"></i> Dataset collected from DHT22 sensor over 30 days with labeled environmental conditions
+                </p>
+            </div>
+        </div>
+
+        <!-- Network Section -->
+        <div id="network" class="section">
+            <div class="section-header">
+                <h1><i class="fas fa-wifi"></i> Network Configuration</h1>
+                <p>WiFi and CoreIOT cloud connectivity</p>
+            </div>
+
+            <!-- WiFi Status -->
+            <div class="network-grid">
+                <div class="network-card">
+                    <h3><i class="fas fa-wifi"></i> WiFi Status</h3>
+                    <div class="wifi-status">
+                        <div class="wifi-icon" id="wifiIcon">
+                            <i class="fas fa-wifi"></i>
+                        </div>
+                        <div class="wifi-info">
+                            <h4 id="wifiMode">Access Point Mode</h4>
+                            <p id="wifiSSID">SSID: ESP32-IoT-AP</p>
+                            <p id="wifiIP">IP: 192.168.4.1</p>
+                        </div>
+                    </div>
+                    <button class="btn-secondary" onclick="toggleWiFiMode()">
+                        <i class="fas fa-exchange-alt"></i> Switch to Station Mode
+                    </button>
+                </div>
+
+                <div class="network-card">
+                    <h3><i class="fas fa-cloud"></i> CoreIOT Status</h3>
+                    <div class="cloud-status">
+                        <div class="cloud-icon" id="cloudIcon">
+                            <i class="fas fa-cloud"></i>
+                        </div>
+                        <div class="cloud-info">
+                            <h4 id="cloudStatus">Connected</h4>
+                            <p id="cloudServer">Server: app.coreiot.io</p>
+                            <p id="lastPublish">Last Publish: Just now</p>
+                        </div>
+                    </div>
+                    <button class="btn-secondary" onclick="testCloudConnection()">
+                        <i class="fas fa-sync"></i> Test Connection
+                    </button>
+                </div>
+            </div>
+
+            <!-- Network Configuration -->
+            <div class="config-card">
+                <h3><i class="fas fa-network-wired"></i> Network Settings</h3>
+                <form id="networkForm" onsubmit="saveNetworkConfig(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label><i class="fas fa-wifi"></i> WiFi SSID</label>
+                            <input type="text" id="wifiSSID" placeholder="Enter WiFi SSID" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-lock"></i> WiFi Password</label>
+                            <input type="password" id="wifiPassword" placeholder="Enter WiFi Password" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-key"></i> CoreIOT Token</label>
+                            <input type="text" id="coreiotToken" placeholder="Enter Device Token" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-server"></i> CoreIOT Server</label>
+                            <input type="text" id="coreiotServer" value="app.coreiot.io" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-hashtag"></i> CoreIOT Port</label>
+                            <input type="number" id="coreiotPort" value="1883" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-clock"></i> Publish Interval (s)</label>
+                            <input type="number" id="publishInterval" value="30" min="5" max="300" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-save"></i> Save Configuration
+                    </button>
+                </form>
+            </div>
+
+            <!-- I2C Device Scan -->
+            <div class="i2c-card">
+                <h3><i class="fas fa-search"></i> I2C Device Scanner</h3>
+                <p>Auto-detect connected I2C devices on the system bus</p>
+                <button class="btn-secondary" onclick="scanI2CDevices()">
+                    <i class="fas fa-search"></i> Scan I2C Bus
+                </button>
+                <div class="i2c-results" id="i2cResults">
+                    <p class="placeholder">Click scan to detect devices...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div id="settings" class="section">
+            <div class="section-header">
+                <h1><i class="fas fa-cog"></i> System Settings</h1>
+                <p>Configure system parameters and preferences</p>
+            </div>
+
+            <div class="settings-grid">
+                <div class="settings-card">
+                    <h3><i class="fas fa-sliders-h"></i> General Settings</h3>
+                    <div class="setting-item">
+                        <label>Device Name</label>
+                        <input type="text" id="deviceName" value="ESP32-IoT-Device">
+                    </div>
+                    <div class="setting-item">
+                        <label>Time Zone</label>
+                        <select id="timezone">
+                            <option value="UTC+7">UTC+7 (Vietnam)</option>
+                            <option value="UTC+0">UTC+0 (GMT)</option>
+                            <option value="UTC-5">UTC-5 (EST)</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Language</label>
+                        <select id="language">
+                            <option value="en">English</option>
+                            <option value="vi">Tiếng Việt</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3><i class="fas fa-bell"></i> Notifications</h3>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="tempAlerts" checked>
+                            Temperature Alerts
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="humidityAlerts" checked>
+                            Humidity Alerts
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="cloudAlerts">
+                            Cloud Connection Alerts
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3><i class="fas fa-database"></i> Data Logging</h3>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="enableLogging" checked>
+                            Enable Data Logging
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label>Log Interval (seconds)</label>
+                        <input type="number" id="logInterval" value="60" min="10" max="3600">
+                    </div>
+                    <div class="setting-item">
+                        <button class="btn-secondary" onclick="downloadLogs()">
+                            <i class="fas fa-download"></i> Download Logs
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3><i class="fas fa-tools"></i> System Actions</h3>
+                    <div class="setting-item">
+                        <button class="btn-secondary" onclick="restartSystem()">
+                            <i class="fas fa-redo"></i> Restart System
+                        </button>
+                    </div>
+                    <div class="setting-item">
+                        <button class="btn-warning" onclick="resetSettings()">
+                            <i class="fas fa-exclamation-triangle"></i> Reset to Defaults
+                        </button>
+                    </div>
+                    <div class="setting-item">
+                        <button class="btn-danger" onclick="factoryReset()">
+                            <i class="fas fa-trash"></i> Factory Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-primary btn-large" onclick="saveSettings()">
+                <i class="fas fa-save"></i> Save All Settings
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p>Processing...</p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
