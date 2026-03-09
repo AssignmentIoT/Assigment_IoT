@@ -1,8 +1,10 @@
 #include "coreiot.h"
+#include "global.h" // Bắt buộc include để gọi biến nhiệt độ và Semaphore
+#include <ArduinoJson.h>
 
 // ----------- CONFIGURE THESE! -----------
-const char* coreIOT_Server = "10.235.76.226";  
-const char* coreIOT_Token = "g7drm1amhd3dchr379xu";   // Device Access Token
+const char* coreIOT_Server = "app.coreiot.io";  
+const char* coreIOT_Token = "TOKEN_CUA_DEVICE";   
 const int   mqttPort = 1883;
 // ----------------------------------------
 
@@ -11,25 +13,21 @@ PubSubClient client(espClient);
 
 
 void reconnect() {
-  // Loop until we're reconnected
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
-    // Attempt to connect (username=token, password=empty)
-    //if (client.connect("ESP32Client", coreIOT_Token, NULL)) {
+    
+    // Tạo ID ngẫu nhiên cho ESP32
     String clientId = "ESP32Client-";
     clientId += String(random(0xffff), HEX);
 
-    if (client.connect(clientId.c_str())) {
-        
+    // 3. QUAN TRỌNG: Truyền Token vào vị trí Username (tham số thứ 2)
+    if (client.connect(clientId.c_str(), coreIOT_Token, NULL)) { 
       Serial.println("connected to CoreIOT Server!");
-      client.subscribe("v1/devices/me/rpc/request/+");
-      Serial.println("Subscribed to v1/devices/me/rpc/request/+");
-
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
       Serial.println(" try again in 5 seconds");
-      delay(5000);
+      vTaskDelay(5000 / portTICK_PERIOD_MS); // Dùng vTaskDelay thay vì delay()
     }
   }
 }
