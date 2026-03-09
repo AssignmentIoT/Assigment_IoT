@@ -14,11 +14,20 @@
 #include "task_webserver.h"
 #include "task_core_iot.h"
 
+float glob_temperature = 27.5; // Gắn tạm giá trị để test Dashboard
+float glob_humidity = 65.0;    // Gắn tạm giá trị để test Dashboard
+String WIFI_SSID = "TEN_WIFI_NHA_BAN";
+String WIFI_PASS = "MAT_KHAU_WIFI";
+String CORE_IOT_TOKEN = "zwSI7RvTd2GoJxwRBEOT";
+String CORE_IOT_SERVER = "app.coreiot.io";
+String CORE_IOT_PORT = "1883";
+boolean isWifiConnected = false;
+SemaphoreHandle_t xBinarySemaphoreInternet = NULL;
 void setup()
 {
   Serial.begin(115200);
   check_info_File(0);
-
+  
   xTaskCreate(led_blinky, "Task LED Blink", 2048, NULL, 2, NULL);
   xTaskCreate(neo_blinky, "Task NEO Blink", 2048, NULL, 2, NULL);
   xTaskCreate(temp_humi_monitor, "Task TEMP HUMI Monitor", 2048, NULL, 2, NULL);
