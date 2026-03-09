@@ -9,8 +9,8 @@
 extern float glob_temperature;
 extern float glob_humidity;
 
-extern String WIFI_SSID;
-extern String WIFI_PASS;
+extern String WIFI_SSID = "TEN_WIFI_NHA_BAN";
+extern String WIFI_PASS = "MAT_KHAU_WIFI";
 extern String CORE_IOT_TOKEN;
 extern String CORE_IOT_SERVER;
 extern String CORE_IOT_PORT;
