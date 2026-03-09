@@ -77,52 +77,65 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 
 
-void setup_coreiot(){
+// void setup_coreiot(){
 
-  //Serial.print("Connecting to WiFi...");
-  //WiFi.begin(wifi_ssid, wifi_password);
-  //while (WiFi.status() != WL_CONNECTED) {
+//   //Serial.print("Connecting to WiFi...");
+//   //WiFi.begin(wifi_ssid, wifi_password);
+//   //while (WiFi.status() != WL_CONNECTED) {
   
-  // while (isWifiConnected == false) {
-  //   delay(500);
-  //   Serial.print(".");
-  // }
+//   // while (isWifiConnected == false) {
+//   //   delay(500);
+//   //   Serial.print(".");
+//   // }
 
+//   while(1){
+//     if (xSemaphoreTake(xBinarySemaphoreInternet, portMAX_DELAY)) {
+//       break;
+//     }
+//     delay(500);
+//     Serial.print(".");
+//   }
+
+
+//   Serial.println(" Connected!");
+
+//   client.setServer(CORE_IOT_SERVER.c_str(), CORE_IOT_PORT.toInt());
+//   client.setCallback(callback);
+
+// }
+void setup_coreiot(){
+  // 4. CHỜ INTERNET TỪ TASK_WIFI.CPP
+  Serial.println("CoreIOT Task is waiting for Internet...");
   while(1){
-    if (xSemaphoreTake(xBinarySemaphoreInternet, portMAX_DELAY)) {
+    if (xSemaphoreTake(xBinarySemaphoreInternet, portMAX_DELAY) == pdTRUE) {
+      // Đã có internet, trả lại cờ cho task khác dùng
+      xSemaphoreGive(xBinarySemaphoreInternet); 
       break;
     }
-    delay(500);
-    Serial.print(".");
+    vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 
-
-  Serial.println(" Connected!");
-
-  client.setServer(CORE_IOT_SERVER.c_str(), CORE_IOT_PORT.toInt());
-  client.setCallback(callback);
-
+  Serial.println("Internet is ready! Setup CoreIOT...");
+  client.setServer(coreIOT_Server, mqttPort);
 }
-
 void coreiot_task(void *pvParameters){
-
     setup_coreiot();
 
     while(1){
-
         if (!client.connected()) {
             reconnect();
         }
         client.loop();
 
-        // Sample payload, publish to 'v1/devices/me/telemetry'
+        // 5. ĐÓNG GÓI JSON & GỬI DỮ LIỆU
+        // Lấy giá trị từ biến glob_temperature và glob_humidity
         String payload = "{\"temperature\":" + String(glob_temperature) +  ",\"humidity\":" + String(glob_humidity) + "}";
         
         client.publish("v1/devices/me/telemetry", payload.c_str());
-
-
         
         Serial.println("Published payload: " + payload);
-        vTaskDelay(10000);  // Publish every 10 seconds
+        
+        // Gửi mỗi 10 giây
+        vTaskDelay(10000 / portTICK_PERIOD_MS);  
     }
 }
