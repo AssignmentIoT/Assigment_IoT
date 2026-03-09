@@ -1,10 +1,6 @@
-#include "coreiot.h"
-#include "global.h" // Bắt buộc include để gọi biến nhiệt độ và Semaphore
-#include <ArduinoJson.h>
-
 // ----------- CONFIGURE THESE! -----------
-const char* coreIOT_Server = "app.coreiot.io";  
-const char* coreIOT_Token = "TOKEN_CUA_DEVICE";   
+const char* coreIOT_Server = "10.235.76.226";  
+const char* coreIOT_Token = "g7drm1amhd3dchr379xu";   // Device Access Token
 const int   mqttPort = 1883;
 // ----------------------------------------
 
@@ -13,21 +9,25 @@ PubSubClient client(espClient);
 
 
 void reconnect() {
+  // Loop until we're reconnected
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
-    
-    // Tạo ID ngẫu nhiên cho ESP32
+    // Attempt to connect (username=token, password=empty)
+    //if (client.connect("ESP32Client", coreIOT_Token, NULL)) {
     String clientId = "ESP32Client-";
     clientId += String(random(0xffff), HEX);
 
-    // 3. QUAN TRỌNG: Truyền Token vào vị trí Username (tham số thứ 2)
-    if (client.connect(clientId.c_str(), coreIOT_Token, NULL)) { 
+    if (client.connect(clientId.c_str())) {
+        
       Serial.println("connected to CoreIOT Server!");
+      client.subscribe("v1/devices/me/rpc/request/+");
+      Serial.println("Subscribed to v1/devices/me/rpc/request/+");
+
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
       Serial.println(" try again in 5 seconds");
-      vTaskDelay(5000 / portTICK_PERIOD_MS); // Dùng vTaskDelay thay vì delay()
+      delay(5000);
     }
   }
 }
@@ -77,65 +77,52 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 
 
-// void setup_coreiot(){
-
-//   //Serial.print("Connecting to WiFi...");
-//   //WiFi.begin(wifi_ssid, wifi_password);
-//   //while (WiFi.status() != WL_CONNECTED) {
-  
-//   // while (isWifiConnected == false) {
-//   //   delay(500);
-//   //   Serial.print(".");
-//   // }
-
-//   while(1){
-//     if (xSemaphoreTake(xBinarySemaphoreInternet, portMAX_DELAY)) {
-//       break;
-//     }
-//     delay(500);
-//     Serial.print(".");
-//   }
-
-
-//   Serial.println(" Connected!");
-
-//   client.setServer(CORE_IOT_SERVER.c_str(), CORE_IOT_PORT.toInt());
-//   client.setCallback(callback);
-
-// }
 void setup_coreiot(){
-  // 4. CHỜ INTERNET TỪ TASK_WIFI.CPP
-  Serial.println("CoreIOT Task is waiting for Internet...");
+
+  //Serial.print("Connecting to WiFi...");
+  //WiFi.begin(wifi_ssid, wifi_password);
+  //while (WiFi.status() != WL_CONNECTED) {
+  
+  // while (isWifiConnected == false) {
+  //   delay(500);
+  //   Serial.print(".");
+  // }
+
   while(1){
-    if (xSemaphoreTake(xBinarySemaphoreInternet, portMAX_DELAY) == pdTRUE) {
-      // Đã có internet, trả lại cờ cho task khác dùng
-      xSemaphoreGive(xBinarySemaphoreInternet); 
+    if (xSemaphoreTake(xBinarySemaphoreInternet, portMAX_DELAY)) {
       break;
     }
-    vTaskDelay(500 / portTICK_PERIOD_MS);
+    delay(500);
+    Serial.print(".");
   }
 
-  Serial.println("Internet is ready! Setup CoreIOT...");
-  client.setServer(coreIOT_Server, mqttPort);
+
+  Serial.println(" Connected!");
+
+  client.setServer(CORE_IOT_SERVER.c_str(), CORE_IOT_PORT.toInt());
+  client.setCallback(callback);
+
 }
+
 void coreiot_task(void *pvParameters){
+
     setup_coreiot();
 
     while(1){
+
         if (!client.connected()) {
             reconnect();
         }
         client.loop();
 
-        // 5. ĐÓNG GÓI JSON & GỬI DỮ LIỆU
-        // Lấy giá trị từ biến glob_temperature và glob_humidity
+        // Sample payload, publish to 'v1/devices/me/telemetry'
         String payload = "{\"temperature\":" + String(glob_temperature) +  ",\"humidity\":" + String(glob_humidity) + "}";
         
         client.publish("v1/devices/me/telemetry", payload.c_str());
+
+
         
         Serial.println("Published payload: " + payload);
-        
-        // Gửi mỗi 10 giây
-        vTaskDelay(10000 / portTICK_PERIOD_MS);  
+        vTaskDelay(10000);  // Publish every 10 seconds
     }
 }
